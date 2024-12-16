@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Wallet Analytics Dashboard</h1>
+<form method="POST" action="/analytics">
+    <label for="wallet_address">Enter Wallet Address:</label>
+    <input type="text" id="wallet_address" name="wallet_address" required>
+    <button type="submit">Get Analytics</button>
+</form>
+
+<div id="results"></div>
+
+<script>
+    document.querySelector('form').onsubmit = async (event) => {
+        event.preventDefault();
+        const walletAddress = document.querySelector('#wallet_address').value;
+        const response = await fetch('/analytics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `wallet_address=${walletAddress}`
+        });
+
+        const resultsDiv = document.querySelector('#results');
+        resultsDiv.innerHTML = ''; // Clear previous results
+
+        if (response.ok) {
+            const data = await response.json();
+            const analytics = data.analytics;
+            resultsDiv.innerHTML = `
+                <h2>Analytics for Wallet: ${walletAddress}</h2>
+                <p><strong>Number of Outgoing Transactions:</strong> ${analytics.num_outgoing}</p>
+                <p><strong>Number of Incoming Transactions:</strong> ${analytics.num_incoming}</p>
+                <p><strong>Average Outgoing Value:</strong> ${analytics.avg_outgoing_value.toFixed(2)} ETH</p>
+                <p><strong>Average Incoming Value:</strong> ${analytics.avg_incoming_value.toFixed(2)} ETH</p>
+                <p><strong>Largest Transaction:</strong> ${analytics.largest_transaction.toFixed(2)} ETH</p>
+                <p><strong>Degree Centrality:</strong> ${analytics.degree_centrality.toFixed(4)}</p>
+                <p><strong>Betweenness Centrality:</strong> ${analytics.betweenness_centrality.toFixed(4)}</p>
+                <p><strong>PageRank:</strong> ${analytics.pagerank.toFixed(4)}</p>
+                <h3>Top Counterparties</h3>
+                <ul>
+                    ${analytics.top_counterparties.map(c => `<li>${c.To}: ${c['Value_OUT(ETH)']} ETH</li>`).join('')}
+                </ul>
+                <h3>Transaction Trends</h3>
+                <img src="data:image/png;base64,${data.trend_plot}" alt="Transaction Trends">
+            `;
+        } else {
+            const errorData = await response.json();
+            resultsDiv.innerHTML = `<p class="error">${errorData.error}</p>`;
+        }
+    };
+</script>
+{% endblock %}
